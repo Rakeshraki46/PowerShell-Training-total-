@@ -1,0 +1,21 @@
+        # Connect to Microsoft Entra ID
+        Connect-MgGraph -Scopes "ServicePrincipal.ReadWrite.All"
+
+        # Get the SAML application
+        $appId = "<your_app_id>" # Replace with your application ID
+        $app = Get-MgServicePrincipal -ServicePrincipalId $appId
+
+        # Get all password credentials
+        $credentials = Get-MgServicePrincipalPasswordCredential -ServicePrincipalId $appId
+
+        # Find near-expiring certificates
+        $today = Get-Date
+        $nearExpiryThreshold = New-TimeSpan -Days 30 # Example: 30 days
+        $nearExpiry = $credentials | Where-Object {$_.EndDate -lt ($today.Add($nearExpiryThreshold))}
+
+        # Send email notifications
+        foreach ($credential in $nearExpiry) {
+          $subject = "SAML Certificate Expiration Notification"
+          $body = "The SAML certificate for application '$($app.DisplayName)' is expiring soon on $($credential.EndDate)."
+          Send-MailMessage -To "<your_email_address>" -Subject $subject -Body $body -BodyAsHtml -SmtpServer "<your_smtp_server>" -Port <your_smtp_port> -UseSsl -From "<your_email_address>"
+        }
